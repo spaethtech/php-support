@@ -1,0 +1,18 @@
+{
+    "name": "spaethtech/support",
+    "description": "A support library for our projects.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.4",
+        "ext-json": "*",
+        "composer/composer": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "SpaethTech\\": "src/",
+            "Examples\\": "examples/",
+            "Tests\\": "tests/"
+        }
+    }
+}

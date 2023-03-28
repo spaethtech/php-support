@@ -19,6 +19,154 @@ final class Arrays
     public const COMBINE_MODE_OVERWRITE  = 1;
     public const COMBINE_MODE_MERGE      = 2;
 
+    #region Validation
+
+    /**
+     * Determines whether an array is NULL.
+     *
+     * @param array|null $array The array upon which to operate.
+     *
+     * @return bool TRUE if the array is NULL.
+     */
+    public static function isNull(?array $array): bool
+    {
+        return $array === null;
+    }
+
+    /**
+     * Determines whether an array is empty.
+     *
+     * @param array|null $array The array upon which to operate.
+     *
+     * @return bool TRUE if the array is empty, but not NULL.
+     */
+    public static function isEmpty(?array $array): bool
+    {
+        if (self::isNull($array))
+            return false;
+
+        return $array === [] || count($array) === 0;
+    }
+
+    /**
+     * Determines whether an array is null or empty.
+     *
+     * @param array|null $array The array upon which to operate.
+     *
+     * @return bool TRUE if the array is either NULL or empty.
+     */
+    public static function isNullOrEmpty(?array $array): bool
+    {
+        return self::isNull($array) || self::isEmpty($array);
+    }
+
+    /**
+     * Determines whether an array has any string keys.
+     *
+     * @param array|null $array The array upon which to operate.
+     *
+     * @return bool TRUE if the array has any string keys.
+     */
+    public static function isAssociative(?array $array): bool
+    {
+        if (self::isNullOrEmpty($array))
+            return false;
+
+        return count(array_filter(array_keys($array), "is_string")) > 0;
+    }
+
+    /**
+     * Determines whether an array has only integer keys.
+     *
+     * @param array|null $array The array upon which to operate.
+     *
+     * @return bool TRUE if the array has only integer keys.
+     */
+    public static function isIndexed(?array $array): bool
+    {
+        if (self::isNullOrEmpty($array))
+            return false;
+
+        return !self::isAssociative($array);
+    }
+
+    /**
+     * Determines whether an array has sequential keys.
+     *
+     * @example
+     *
+     * Using built-in logic:
+     * - Array::isSequential([ 0, 1, 4 ])                               => false
+     * - Array::isSequential([ 0, 1, 2 ])                               => true
+     * - Array::isSequential([ "0" => 0, "1" => 1, "2" => 2 ])          => true
+     * - Array::isSequential([ "0" => 3, "1" => "a", "2" => "test" ])   => true
+     *
+     * Using the default callback for ordinal values:
+     * - Array::isSequential([ "a" => 3, "b" => "a", "c" => "test" ])   => true
+     * - Array::isSequential([ "A" => 3, "b" => "a", "c" => "test" ])   => false
+     *
+     * @param array|null $array The array upon which to operate.
+     * @param callable|null $fn An optional callback to convert the keys.
+     *
+     * @return bool TRUE if the array has sequential keys, otherwise FALSE.
+     */
+    public static function isSequential(?array $array, callable $fn = null): bool
+    {
+        if (self::isNullOrEmpty($array))
+            return false;
+
+        $keys = array_keys($array);
+
+        if (self::isAssociative($array))
+        {
+            $fn ??= fn($current, $first) => ord($current) - ord($first);
+            $key0 = $keys[0];
+
+            foreach($keys as &$key)
+                $key = $fn($key, $key0);
+        }
+
+        return $keys === range(0, count($array) - 1);
+    }
+
+    #endregion
+
+
+    public static function first(?array $array)
+    {
+        if (self::isNullOrEmpty($array))
+            return null;
+
+        return $array[array_key_first($array)];
+    }
+
+    public static function last(?array $array)
+    {
+        if (self::isNullOrEmpty($array))
+            return null;
+
+        return $array[array_key_last($array)];
+    }
+
+    public static function firstOrDefault(?array $array, $default)
+    {
+        if (self::isNullOrEmpty($array))
+            return $default;
+
+        return $array[array_key_first($array)];
+    }
+
+    public static function lastOrDefault(?array $array, $default)
+    {
+        if (self::isNullOrEmpty($array))
+            return $default;
+
+        return $array[array_key_last($array)];
+    }
+
+
+
+
 
     /**
      * @throws Exception
@@ -53,10 +201,8 @@ final class Arrays
     }
 
 
-    public static function is_assoc(array $array): bool
-    {
-        return array_keys($array) !== range(0, count($array) - 1);
-    }
+
+
 
     /**
      * @param array $array
@@ -80,59 +226,22 @@ final class Arrays
         }
 
         return $current;
-
-
     }
 
-    /**
-     * @param array $array The array for which to traverse.
-     * @param string $path The path to use during traversal.
-     * @param string $delimiter The delimiter to use when parsing the path, defaults to "/"
-     * @param bool $exception Determines whether to throw an Exception on a non-existent path, defaults to TRUE.
-     * @param null $default The value to return on a non-existent path when Exceptions are FALSE, defaults to NULL.
-     * @return mixed Returns the value at the successfully traversed index.
-     * @throws ArrayTraversalException
-     */
-    /*
-    public static function path(array $array, string $path, string $delimiter = "/", bool $exception = true, $default = null)
-    {
-        $steps = explode($delimiter, $path);
-        $current = $array;
 
-        $taken = [];
-
-        foreach ($steps as $step)
-        {
-            $taken[] = $step;
-
-            if (!array_key_exists($step, $current))
-            {
-                if($exception)
-                    throw new ArrayTraversalException("Could not traverse beyond '".implode($delimiter, $taken)."'");
-
-                return $default;
-            }
-
-            $current = $current[$step];
-
-        }
-
-        return $current;
-    }
-    */
+    #region Borrowed from Illuminate
 
     /**
      * Determine whether the given value is array accessible.
      *
-     * @param  mixed  $value
+     * @param  mixed $value
+     *
      * @return bool
      */
-    public static function accessible($value) : bool
+    public static function accessible($value): bool
     {
         return is_array($value) || $value instanceof ArrayAccess;
     }
-
-
 
     /**
      * Determine if the given key exists in the provided array.
@@ -141,23 +250,16 @@ final class Arrays
      * @param  string|int  $key
      * @return bool
      */
-    public static function exists($array, $key) : bool
+    public static function exists($array, $key): bool
     {
-//        if ($array instanceof Collection) {
-//            return $array->has($key);
-//        }
-
-        if ($array instanceof ArrayAccess) {
+        if ($array instanceof ArrayAccess)
             return $array->offsetExists($key);
-        }
 
-        if (is_float($key)) {
+        if (is_float($key))
             $key = (string) $key;
-        }
 
         return array_key_exists($key, $array);
     }
-
 
     /**
      * Get an item from an array using "dot" notation.
@@ -169,33 +271,26 @@ final class Arrays
      */
     public static function get($array, $key, $default = null, string $delimiter = ".")
     {
-        if (! self::accessible($array)) {
+        if (!self::accessible($array))
             return value($default);
-        }
 
-        if (is_null($key)) {
+        if (is_null($key))
             return $array;
-        }
 
-        if (self::exists($array, $key)) {
+        if (self::exists($array, $key))
             return $array[$key];
-        }
 
-        if (! str_contains($key, $delimiter)) {
+        if (!str_contains($key, $delimiter))
             return $array[$key] ?? value($default);
-        }
 
-        foreach (explode($delimiter, $key) as $segment) {
-            if (self::accessible($array) && self::exists($array, $segment)) {
+        foreach (explode($delimiter, $key) as $segment)
+            if (self::accessible($array) && self::exists($array, $segment))
                 $array = $array[$segment];
-            } else {
+            else
                 return value($default);
-            }
-        }
 
         return $array;
     }
-
 
     /**
      * Check if an item or items exist in an array using "dot" notation.
@@ -208,31 +303,27 @@ final class Arrays
      */
     public static function has($array, $keys, string $delimiter = ".") : bool
     {
-        $keys = (array) $keys;
+        $keys = (array)$keys;
 
-        if (! $array || $keys === []) {
+        if (!$array || $keys === [])
             return false;
-        }
 
-        foreach ($keys as $key) {
+        foreach ($keys as $key)
+        {
             $subKeyArray = $array;
 
-            if (self::exists($array, $key)) {
+            if (self::exists($array, $key))
                 continue;
-            }
 
-            foreach (explode($delimiter, $key) as $segment) {
-                if (self::accessible($subKeyArray) && self::exists($subKeyArray, $segment)) {
+            foreach (explode($delimiter, $key) as $segment)
+                if (self::accessible($subKeyArray) && self::exists($subKeyArray, $segment))
                     $subKeyArray = $subKeyArray[$segment];
-                } else {
+                else
                     return false;
-                }
-            }
         }
 
         return true;
     }
-
 
     /**
      * Set an array item to a given value using "dot" notation.
@@ -246,27 +337,25 @@ final class Arrays
      *
      * @return array
      */
-    public static function set(array &$array, $key, $value, string $delimiter = ".") : array
+    public static function set(array &$array, $key, $value, string $delimiter = "."): array
     {
-        if (is_null($key)) {
+        if (is_null($key))
             return $array = $value;
-        }
 
         $keys = explode($delimiter, $key);
 
-        foreach ($keys as $i => $key) {
-            if (count($keys) === 1) {
+        foreach ($keys as $i => $key)
+        {
+            if (count($keys) === 1)
                 break;
-            }
 
             unset($keys[$i]);
 
             // If the key doesn't exist at this depth, we will just create an empty array
             // to hold the next value, allowing us to create the arrays to hold final
             // values at the correct depth. Then we'll keep digging into the array.
-            if (! isset($array[$key]) || ! is_array($array[$key])) {
+            if (! isset($array[$key]) || ! is_array($array[$key]))
                 $array[$key] = [];
-            }
 
             $array = &$array[$key];
         }
@@ -276,7 +365,7 @@ final class Arrays
         return $array;
     }
 
-
+    #endregion
 
 
 
@@ -331,7 +420,7 @@ final class Arrays
 
     /**
      * @param array $input An input array for which to traverse, recursively.
-     * @param callable|null $callback An optional callback function, if none then simply filter our NULL values.
+     * @param callable|null $callback An optional callback function, if none then simply filter our null values.
      * @return array Returns the filtered array.
      */
     public static function array_filter_recursive(array $input, callable $callback = null): array

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace SpaethTech\Support;
 
+use ArrayAccess;
 use Exception;
 use SpaethTech\Support\Exceptions\ArrayTraversalException;
 
@@ -119,6 +120,165 @@ final class Arrays
         return $current;
     }
     */
+
+    /**
+     * Determine whether the given value is array accessible.
+     *
+     * @param  mixed  $value
+     * @return bool
+     */
+    public static function accessible($value) : bool
+    {
+        return is_array($value) || $value instanceof ArrayAccess;
+    }
+
+
+
+    /**
+     * Determine if the given key exists in the provided array.
+     *
+     * @param  ArrayAccess|array  $array
+     * @param  string|int  $key
+     * @return bool
+     */
+    public static function exists($array, $key) : bool
+    {
+//        if ($array instanceof Collection) {
+//            return $array->has($key);
+//        }
+
+        if ($array instanceof ArrayAccess) {
+            return $array->offsetExists($key);
+        }
+
+        if (is_float($key)) {
+            $key = (string) $key;
+        }
+
+        return array_key_exists($key, $array);
+    }
+
+
+    /**
+     * Get an item from an array using "dot" notation.
+     *
+     * @param  ArrayAccess|array  $array
+     * @param  string|int|null  $key
+     * @param  mixed $default
+     * @return mixed
+     */
+    public static function get($array, $key, $default = null, string $delimiter = ".")
+    {
+        if (! self::accessible($array)) {
+            return value($default);
+        }
+
+        if (is_null($key)) {
+            return $array;
+        }
+
+        if (self::exists($array, $key)) {
+            return $array[$key];
+        }
+
+        if (! str_contains($key, $delimiter)) {
+            return $array[$key] ?? value($default);
+        }
+
+        foreach (explode($delimiter, $key) as $segment) {
+            if (self::accessible($array) && self::exists($array, $segment)) {
+                $array = $array[$segment];
+            } else {
+                return value($default);
+            }
+        }
+
+        return $array;
+    }
+
+
+    /**
+     * Check if an item or items exist in an array using "dot" notation.
+     *
+     * @param ArrayAccess|array $array
+     * @param string|array $keys
+     * @param string $delimiter
+     *
+     * @return bool
+     */
+    public static function has($array, $keys, string $delimiter = ".") : bool
+    {
+        $keys = (array) $keys;
+
+        if (! $array || $keys === []) {
+            return false;
+        }
+
+        foreach ($keys as $key) {
+            $subKeyArray = $array;
+
+            if (self::exists($array, $key)) {
+                continue;
+            }
+
+            foreach (explode($delimiter, $key) as $segment) {
+                if (self::accessible($subKeyArray) && self::exists($subKeyArray, $segment)) {
+                    $subKeyArray = $subKeyArray[$segment];
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Set an array item to a given value using "dot" notation.
+     *
+     * If no key is given to the method, the entire array will be replaced.
+     *
+     * @param array $array
+     * @param string|int|null $key
+     * @param mixed $value
+     * @param string $delimiter
+     *
+     * @return array
+     */
+    public static function set(array &$array, $key, $value, string $delimiter = ".") : array
+    {
+        if (is_null($key)) {
+            return $array = $value;
+        }
+
+        $keys = explode($delimiter, $key);
+
+        foreach ($keys as $i => $key) {
+            if (count($keys) === 1) {
+                break;
+            }
+
+            unset($keys[$i]);
+
+            // If the key doesn't exist at this depth, we will just create an empty array
+            // to hold the next value, allowing us to create the arrays to hold final
+            // values at the correct depth. Then we'll keep digging into the array.
+            if (! isset($array[$key]) || ! is_array($array[$key])) {
+                $array[$key] = [];
+            }
+
+            $array = &$array[$key];
+        }
+
+        $array[array_shift($keys)] = $value;
+
+        return $array;
+    }
+
+
+
+
 
     /**
      * @param array $array The array for which to traverse.

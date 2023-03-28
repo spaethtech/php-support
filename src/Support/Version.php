@@ -44,4 +44,12 @@ final class Version
 
         return join(".", $parts) . ($this->release !== "" ? "-$this->release" : "");
     }
+
+    public function getMajorMinor(): string
+    {
+        return "$this->major.$this->minor";
+    }
+
+
+
 }

@@ -67,4 +67,34 @@ final class Strings
         return ($haystack === null || trim($haystack) === "");
     }
 
+    /**
+     * @param string $haystack
+     * @param string $needle
+     *
+     * @return false|string
+     */
+    public static function beforeLast(string $haystack, string $needle)
+    {
+        if (!($index = strrpos($haystack, $needle)))
+            return false;
+
+        return substr($haystack, 0, $index + 1);
+    }
+
+    /**
+     * @param string $haystack
+     * @param string $needle
+     *
+     * @return false|string
+     */
+    public static function afterLast(string $haystack, string $needle)
+    {
+        if (!($index = strrpos($haystack, $needle)))
+            return false;
+
+        return substr($haystack, $index + 1);
+    }
+
+
+
 }
